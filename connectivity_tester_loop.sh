@@ -3,16 +3,21 @@
 from datetime import datetime
 from time import sleep
 import os
+import psycopg2
 
 TIMEOUT_SECONDS = 3
 
-log_fh = open("connectivity.log", "a")
-while True:
-	return_code = os.system("ping -w %d -c 1 google.com" % (TIMEOUT_SECONDS))
+if __name__ == "__main__":
+	conn = psycopg2.connect("dbname=netlog user=kostmo")
+	while True:
+		return_code = os.system("ping -w %d -c 1 google.com" % (TIMEOUT_SECONDS))
 	
-	log_fh.write( str(datetime.now()) + "\t" + str(return_code) + "\n")
-	log_fh.flush()
-	if not return_code:
-		sleep(TIMEOUT_SECONDS)
+		cur = conn.cursor()
+		cur.execute("INSERT INTO connectivity (connected) VALUES (%s)", (not bool(return_code),))
+		conn.commit()
 
-log_fh.close()
+		if not return_code:
+			sleep(TIMEOUT_SECONDS)
+
+cur.close()
+conn.close()
