@@ -1,0 +1,1 @@
+CREATE TABLE connectivity (timestamp timestamp DEFAULT current_timestamp PRIMARY KEY, connected boolean);

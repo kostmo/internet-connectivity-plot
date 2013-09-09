@@ -11,6 +11,7 @@ of the data leading up to the plottable range is linear and inefficient.
 May be more efficient with a database.
 '''
 
+import psycopg2
 import os
 import datetime
 
@@ -22,11 +23,29 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.dates import DateFormatter
 from matplotlib.ticker import FuncFormatter, FixedLocator
 
-def make_chart(input_filepath, output_file_specifier, DAYS_AGO_TO_START_PLOT, DAYS_AGO_TO_END_PLOT):
+def make_chart(output_file_specifier, days_ago_to_start_plot, days_ago_to_end_plot):
+
+	conn = psycopg2.connect("dbname=netlog user=kostmo password=hunter2")
+	cur = conn.cursor()
 
 	time_now = datetime.datetime.now()
 
-	time_to_end_plotting = time_now - datetime.timedelta(days=DAYS_AGO_TO_END_PLOT)
+	where_clauses = []
+	where_args = []
+
+	if days_ago_to_start_plot is not None:
+		time_to_start_plotting = time_now - datetime.timedelta(days=days_ago_to_start_plot)
+		where_clauses.append("timestamp >= %s")
+		where_args.append(time_to_start_plotting)	
+	
+	if days_ago_to_end_plot is not None:
+		time_to_end_plotting = time_now - datetime.timedelta(days=days_ago_to_end_plot)
+		where_clauses.append("timestamp <= %s")
+		where_args.append(time_to_end_plotting)
+	
+	where_clause_string = ""
+	if where_clauses:
+		where_clause_string = " WHERE " + " AND ".join(where_clauses)
 
 	# first element - dateestamp
 	# second element - duration
@@ -45,36 +64,14 @@ def make_chart(input_filepath, output_file_specifier, DAYS_AGO_TO_START_PLOT, DA
 	total_off_time = datetime.timedelta(seconds=0)
 	last_timestamp = None
 	first_used_timestamp = None
-	first_available_timestamp = None
 	lapse_count = 0	# XXX DEBUG
 	
-	for line in open(input_filepath):
-		splitted = line.split()
+	cur.execute( ("SELECT * FROM connectivity" + where_clause_string + ";"), tuple(where_args))
+	
+	for row in cur.fetchall():
 
-		date = splitted[0]
-		time_24hr = splitted[1]
-		
-		decimal_point_location = time_24hr.rfind(".")
-		time_24hr_integral_seconds = time_24hr
-		if decimal_point_location >= 0:
-			time_24hr_integral_seconds = time_24hr[:decimal_point_location - 1]
-		ping_return_code = int(splitted[2])
-
-
-		fulltime = datetime.datetime.strptime(date + "-" + time_24hr_integral_seconds, "%Y-%m-%d-%H:%M:%S")
-		if not first_available_timestamp:
-			first_available_timestamp = fulltime
-			
-		if DAYS_AGO_TO_START_PLOT is not None:
-			time_to_start_plotting = time_now - datetime.timedelta(days=DAYS_AGO_TO_START_PLOT)
-			if fulltime < time_to_start_plotting:
-				continue
-
-		if fulltime > time_to_end_plotting:
-			break
-
-		is_connected = not bool(ping_return_code)
-
+		fulltime = row[0]
+		is_connected = row[1]
 
 		if not first_used_timestamp:
 			first_used_timestamp = fulltime
@@ -102,6 +99,10 @@ def make_chart(input_filepath, output_file_specifier, DAYS_AGO_TO_START_PLOT, DA
 		
 		previous_is_connected = is_connected
 		last_timestamp = fulltime
+		
+
+	cur.close()
+	conn.close()
 
 	# Draw the final data point
 	xvals.append(last_timestamp)
@@ -113,7 +114,6 @@ def make_chart(input_filepath, output_file_specifier, DAYS_AGO_TO_START_PLOT, DA
 	print "total lapse time within considered time range: %.1f minutes" % (total_off_time_seconds/60)
 	print "Percentage of internet connectivity lapse: %.1f%%" % (100*(total_off_time_seconds/total_time_seconds))
 	print "Connectivity lapse count:", lapse_count
-	print "First available timestamp is", (time_now - first_available_timestamp).days, "days ago."
 
 	chart_title = 'Internet Connectivity since ' + first_used_timestamp.strftime("%A, %B %d")
 	

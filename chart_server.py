@@ -16,7 +16,7 @@ import cgi
 
 from plot_transitions import make_chart
 
-PORT_NUMBER = 80
+PORT_NUMBER = 8080
 
 #This class will handles any incoming request from
 #the browser 

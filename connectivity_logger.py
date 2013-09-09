@@ -5,12 +5,13 @@ from time import sleep
 import os
 import psycopg2
 
-TIMEOUT_SECONDS = 3
+TIMEOUT_SECONDS = 30
+PING_HOSTNAME = "google.com"
 
 if __name__ == "__main__":
-	conn = psycopg2.connect("dbname=netlog user=kostmo")
+	conn = psycopg2.connect("dbname=netlog user=%s" % (os.environ.get("USER")))
 	while True:
-		return_code = os.system("ping -w %d -c 1 google.com" % (TIMEOUT_SECONDS))
+		return_code = os.system("ping -w %d -c 1 %s" % (TIMEOUT_SECONDS, PING_HOSTNAME))
 	
 		cur = conn.cursor()
 		cur.execute("INSERT INTO connectivity (connected) VALUES (%s)", (not bool(return_code),))
