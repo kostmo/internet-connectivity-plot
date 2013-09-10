@@ -13,10 +13,22 @@ from cStringIO import StringIO
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 from os import curdir, sep
 import cgi
+import json
 
-from plot_transitions import make_chart
+from plot_transitions import make_chart, get_timeseries
 
 PORT_NUMBER = 8080
+
+from time import mktime
+from datetime import datetime
+
+class MyEncoder(json.JSONEncoder):
+
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return int(mktime(obj.timetuple()))*1000
+
+        return json.JSONEncoder.default(self, obj)
 
 #This class will handles any incoming request from
 #the browser 
@@ -46,6 +58,30 @@ class myHandler(BaseHTTPRequestHandler):
 
 				self.wfile.write(sio.getvalue())
 				sio.close()
+				
+			elif url_path.endswith(".json"):
+				query_dict = parse_qs(parsed_url.query)
+				
+				mimetype='text/json'
+				#Open the static file requested and send it
+				
+				self.send_response(200)
+				self.send_header('Content-type',mimetype)
+				self.end_headers()
+				
+				start_date_string = query_dict.get("start")[0]
+				end_date_string = query_dict.get("end")[0]
+
+				start_date = datetime.strptime(start_date_string, '%Y-%m-%dT%H:%M:%S.%fZ')
+				end_date = datetime.strptime(end_date_string, '%Y-%m-%dT%H:%M:%S.%fZ')
+
+				data_dict = {"timeseries": zip(*get_timeseries(
+					start_date,
+					end_date
+				))}
+
+				output_json_string = json.dumps(data_dict, cls = MyEncoder)
+				self.wfile.write(output_json_string)
 				
 			else:
 				mimetype='text/html'

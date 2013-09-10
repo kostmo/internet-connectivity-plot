@@ -23,7 +23,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.dates import DateFormatter
 from matplotlib.ticker import FuncFormatter, FixedLocator
 
-def make_chart(output_file_specifier, days_ago_to_start_plot, days_ago_to_end_plot):
+def get_timeseries(time_to_start_plotting, time_to_end_plotting):
 
 	conn = psycopg2.connect("dbname=netlog user=kostmo password=hunter2")
 	cur = conn.cursor()
@@ -33,13 +33,11 @@ def make_chart(output_file_specifier, days_ago_to_start_plot, days_ago_to_end_pl
 	where_clauses = []
 	where_args = []
 
-	if days_ago_to_start_plot is not None:
-		time_to_start_plotting = time_now - datetime.timedelta(days=days_ago_to_start_plot)
+	if time_to_start_plotting is not None:
 		where_clauses.append("timestamp >= %s")
 		where_args.append(time_to_start_plotting)	
 	
-	if days_ago_to_end_plot is not None:
-		time_to_end_plotting = time_now - datetime.timedelta(days=days_ago_to_end_plot)
+	if time_to_end_plotting is not None:
 		where_clauses.append("timestamp <= %s")
 		where_args.append(time_to_end_plotting)
 	
@@ -115,6 +113,20 @@ def make_chart(output_file_specifier, days_ago_to_start_plot, days_ago_to_end_pl
 	print "Percentage of internet connectivity lapse: %.1f%%" % (100*(total_off_time_seconds/total_time_seconds))
 	print "Connectivity lapse count:", lapse_count
 
+	return xvals, yvals
+
+def make_chart(output_file_specifier, days_ago_to_start_plot, days_ago_to_end_plot):
+
+	time_to_start_plotting = None
+	if days_ago_to_start_plot is not None:
+		time_to_start_plotting = time_now - datetime.timedelta(days=days_ago_to_start_plot)
+		
+	time_to_end_plotting = None
+	if days_ago_to_end_plot is not None:
+		time_to_end_plotting = time_now - datetime.timedelta(days=days_ago_to_end_plot)
+
+
+	xvals, yvals = get_timeseries(time_to_start_plotting, time_to_end_plotting)
 	chart_title = 'Internet Connectivity since ' + first_used_timestamp.strftime("%A, %B %d")
 	
 	fig = render_figure(chart_title, xvals, yvals)
