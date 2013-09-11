@@ -61,7 +61,7 @@ graph();
 
 		$("#ajax_loader").css("visibility", "visible");
 		
-		$.getJSON('http://kostmo.pwnz.org:8080/foo.json',
+		$.getJSON('http://' + window.location.hostname + ':8080/foo.json',
 		{
 			"start": $( "#from" ).datepicker( "getDate" ).toJSON(),
 			"end": $( "#to" ).datepicker( "getDate" ).toJSON()
