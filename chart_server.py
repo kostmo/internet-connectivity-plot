@@ -34,6 +34,14 @@ class MyEncoder(json.JSONEncoder):
 #the browser 
 class myHandler(BaseHTTPRequestHandler):
 	
+
+	def do_OPTIONS(self):           
+		self.send_response(200, "ok")       
+		self.send_header('Access-Control-Allow-Origin', '*')                
+		self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+		self.send_header("Access-Control-Allow-Headers", "X-Requested-With") 
+		self.end_headers()
+	
 	#Handler for the GET requests
 	def do_GET(self):
 
@@ -66,6 +74,7 @@ class myHandler(BaseHTTPRequestHandler):
 				#Open the static file requested and send it
 				
 				self.send_response(200)
+				self.send_header('Access-Control-Allow-Origin', '*')
 				self.send_header('Content-type',mimetype)
 				self.end_headers()
 				
