@@ -28,8 +28,6 @@ def get_timeseries(time_to_start_plotting, time_to_end_plotting):
 	conn = psycopg2.connect("dbname=netlog user=kostmo password=hunter2")
 	cur = conn.cursor()
 
-	time_now = datetime.datetime.now()
-
 	where_clauses = []
 	where_args = []
 
@@ -52,8 +50,6 @@ def get_timeseries(time_to_start_plotting, time_to_end_plotting):
 	previous_connectivity = False
 	last_transition_date = None
 
-
-	temp_tuples = []
 	xvals = []
 	yvals = []
 	previous_is_connected = True
@@ -117,6 +113,7 @@ def get_timeseries(time_to_start_plotting, time_to_end_plotting):
 
 def make_chart(output_file_specifier, days_ago_to_start_plot, days_ago_to_end_plot):
 
+	time_now = datetime.datetime.now()
 	time_to_start_plotting = None
 	if days_ago_to_start_plot is not None:
 		time_to_start_plotting = time_now - datetime.timedelta(days=days_ago_to_start_plot)
@@ -127,6 +124,8 @@ def make_chart(output_file_specifier, days_ago_to_start_plot, days_ago_to_end_pl
 
 
 	xvals, yvals = get_timeseries(time_to_start_plotting, time_to_end_plotting)
+	
+	first_used_timestamp = xvals[0]
 	chart_title = 'Internet Connectivity since ' + first_used_timestamp.strftime("%A, %B %d")
 	
 	fig = render_figure(chart_title, xvals, yvals)
@@ -134,7 +133,6 @@ def make_chart(output_file_specifier, days_ago_to_start_plot, days_ago_to_end_pl
 	pp = PdfPages(output_file_specifier)
 	pp.savefig(fig)
 	pp.close()
-
 
 def render_figure(chart_title, xvals, yvals):
 	
@@ -167,7 +165,7 @@ def render_figure(chart_title, xvals, yvals):
 	return fig
 
 if __name__ == "__main__":
-	input_filepath = "sample-data/connectivity.log"
+	
 	output_filename = "simple_connectivity_plot" + ".pdf"
-	make_chart(input_filepath, output_filename, None, 0)
-	os.system("evince %s" % output_filename)
+	make_chart(output_filename, 7, None)
+#	os.system("evince %s" % output_filename)
